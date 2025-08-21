@@ -501,7 +501,8 @@ public class MainWindow {
             row.createCell(4).setCellValue(record.getSnNumber());
             row.createCell(5).setCellValue(record.getNameDepartment());
             row.createCell(6).setCellValue(record.getNote());
-            row.createCell(7).setCellValue(record.getStatus());
+            String statusInRussian=getStatusDisplayName(record.getStatus());
+            row.createCell(7).setCellValue(statusInRussian);
             row.createCell(8).setCellValue(record.getFio());
         }
         // Авторазмер для всех столбцов

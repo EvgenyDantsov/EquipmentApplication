@@ -1,8 +1,8 @@
 package com.example.printapplication.dto;
 
-public class Printer {
+public class Equipment {
     private int id;
-    private String printerName;
+    private String name;
     private String model;
     private String snNumber;
     private String note;
@@ -10,9 +10,9 @@ public class Printer {
     private String status;
     private int equipmentTypeId;
 
-    public Printer(int id, String printerName, String model, String snNumber, String note, String status, int officeId, int equipmentTypeId) {
+    public Equipment(int id, String name, String model, String snNumber, String note, String status, int officeId, int equipmentTypeId) {
         this.id = id;
-        this.printerName = printerName;
+        this.name = name;
         this.model = model;
         this.snNumber = snNumber;
         this.note = note;
@@ -25,8 +25,8 @@ public class Printer {
         return id;
     }
 
-    public String getPrinterName() {
-        return printerName;
+    public String getName() {
+        return name;
     }
 
     public String getModel() {

@@ -67,11 +67,12 @@ public class SeniorDepartmentDAO {
         }
     }
 
-    public static boolean fioExists(String fio) {
-        String sql = "SELECT COUNT(*) FROM seniordepartment WHERE fio = ?";
+    public static boolean fioExists(String fio, Integer excludeId) {
+        String sql = "SELECT COUNT(*) FROM seniordepartment WHERE fio = ? AND id != ?";
         try (Connection connection = DatabaseHelper.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, fio);
+            statement.setInt(2,excludeId);
             ResultSet rs = statement.executeQuery();
             if (rs.next()) {
                 return rs.getInt(1) > 0; // Если count > 0, отделение существует

@@ -37,6 +37,7 @@ public class SeniorDepartmentWindow {
     private static final String UPDATE_SENIOR_DEPARTMENT = "Не удалось обновить старшую отделения.";
     private static final String SELECT_DEPARTMENT_NAME = "Выберите название отделения.";
     private static final String SELECT_FIO_TO_DELETE = "Выберите ФИО для удаления.";
+    public static final int NO_EXCLUDE = -1;
 
     public void start(Stage seniorDepartmentStage, Stage parentStage) {
         this.seniorDepartmentStage = seniorDepartmentStage;
@@ -146,7 +147,7 @@ public class SeniorDepartmentWindow {
         }
         SeniorDepartmentFormData seniorDepartmentFormData = getSeniorDepartmentFormData();
         // Проверка уникальности fio
-        if (SeniorDepartmentDAO.fioExists(seniorDepartmentFormData.fio)) {
+        if (SeniorDepartmentDAO.fioExists(seniorDepartmentFormData.fio, NO_EXCLUDE)) {
             showErrorAlert(seniorDepartmentStage, ERROR_TITLE, FIO_UNIQUE);
             return;
         }
@@ -169,7 +170,7 @@ public class SeniorDepartmentWindow {
         }
         SeniorDepartmentFormData seniorDepartmentFormData = getSeniorDepartmentFormData();
         // Проверка уникальности fio (исключая текущую запись)
-        if (SeniorDepartmentDAO.fioExists(seniorDepartmentFormData.fio)) {
+        if (SeniorDepartmentDAO.fioExists(seniorDepartmentFormData.fio, selectedSeniorDepartment.getId())) {
             showErrorAlert(seniorDepartmentStage, ERROR_TITLE, FIO_UNIQUE);
             return;
         }

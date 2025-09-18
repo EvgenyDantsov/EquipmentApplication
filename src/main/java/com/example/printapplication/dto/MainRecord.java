@@ -4,22 +4,23 @@ public class MainRecord {
     private String nameOffice;
     private String numberOffice;
     private String nameDepartment;
-    private String namePrinter;
+    private String nameEquipment;
     private String model;
     private String snNumber;
     private String note;
     private String status;
     private String fio;
+    private int equipmentTypeId;
 
-    private int printerId;
+    private int equipmentId;
 
     public MainRecord(String nameOffice, String numberOffice, String nameDepartment,
-                      String namePrinter, String model, String snNumber,
+                      String nameEquipment, String model, String snNumber,
                       String note, String status, String fio) {
         this.nameOffice = nameOffice;
         this.numberOffice = numberOffice;
         this.nameDepartment = nameDepartment;
-        this.namePrinter = namePrinter;
+        this.nameEquipment = nameEquipment;
         this.model = model;
         this.snNumber = snNumber;
         this.note = note;
@@ -40,8 +41,8 @@ public class MainRecord {
         return nameDepartment;
     }
 
-    public String getNamePrinter() {
-        return namePrinter;
+    public String getNameEquipment() {
+        return nameEquipment;
     }
 
     public String getModel() {
@@ -62,11 +63,17 @@ public class MainRecord {
     public String getFio() {
         return fio;
     }
-    public int getPrinterId() {
-        return printerId;
+    public int getEquipmentId() {
+        return equipmentId;
     }
 
-    public void setPrinterId(int printerId) {
-        this.printerId = printerId;
+    public void setEquipmentId(int equipmentId) {
+        this.equipmentId = equipmentId;
+    }
+    public int getEquipmentTypeId() {
+        return equipmentTypeId;
+    }
+    public void setEquipmentTypeId(int equipmentTypeId) {
+        this.equipmentTypeId = equipmentTypeId;
     }
 }

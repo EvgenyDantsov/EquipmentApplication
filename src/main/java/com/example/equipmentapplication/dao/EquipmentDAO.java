@@ -2,10 +2,13 @@ package com.example.equipmentapplication.dao;
 
 import com.example.equipmentapplication.DatabaseHelper;
 import com.example.equipmentapplication.dto.Equipment;
+import com.example.equipmentapplication.dto.SeniorDepartment;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class EquipmentDAO {
     public static ObservableList<Equipment> getAllEquipment() {
@@ -24,7 +27,29 @@ public class EquipmentDAO {
         }
         return equipmentList;
     }
+    public static List<Equipment> getByModel(String model) {
 
+        List<Equipment> equipments = new ArrayList<>();
+
+        String sql = "SELECT * FROM equipment WHERE model = ?";
+
+        try (Connection conn = DatabaseHelper.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, model);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    equipments.add(mapRowToEquipment(rs));
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return equipments;
+    }
     // Загружает оборудование по конкретному типу
     public static ObservableList<Equipment> getEquipmentByType(int equipmentTypeId) {
         ObservableList<Equipment> equipmentList = FXCollections.observableArrayList();
@@ -57,6 +82,21 @@ public class EquipmentDAO {
         return new Equipment(id, name, model, snNumber, note, status, officeId, equipmentTypeId);
     }
 
+    public static Equipment getEquipmentById(int id) {
+        try (Connection conn = DatabaseHelper.getConnection()) {
+            String sql = "SELECT * FROM equipment WHERE id = ?";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return mapRowToEquipment(rs);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public static boolean addEquipment(String name, String model, String snNumber, String note, String status, int officeId, int equipmentTypeId) {
         try (Connection connection = DatabaseHelper.getConnection()) {
             String sql = "INSERT INTO equipment (name, model, sn_number, note, status, Office_id, equipmenttype_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -65,10 +105,23 @@ public class EquipmentDAO {
             statement.setString(2, model);
             statement.setString(3, snNumber);
             statement.setString(4, note);
-            statement.setString(5,status);
+            statement.setString(5, status);
             statement.setInt(6, officeId);
             statement.setInt(7, equipmentTypeId);
-            return statement.executeUpdate() > 0;
+            int affectedRows = statement.executeUpdate();
+
+            if (affectedRows > 0) {
+                // Получаем ID вставленного оборудования
+                ResultSet generatedKeys = statement.getGeneratedKeys();
+                if (generatedKeys.next()) {
+                    int equipmentId = generatedKeys.getInt(1);
+                    int responsibleId = getResponsibleIdByOfficeId(officeId);
+                    // Создаём запись в истории
+                    EquipmentHistoryDAO.addHistory(equipmentId, officeId, responsibleId, status, "Добавление", "-");
+                }
+                return true;
+            }
+            return false;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -76,6 +129,8 @@ public class EquipmentDAO {
     }
 
     public static boolean updateEquipment(int id, String name, String model, String snNumber, String note, String status, int officeId, int equipmentTypeId) {
+        Equipment oldEq = getEquipmentById(id);
+        Equipment newEq = new Equipment(id, name, model, snNumber, note, status, officeId, equipmentTypeId);
         try (Connection connection = DatabaseHelper.getConnection()) {
             String sql = "UPDATE equipment SET name = ?, model = ?, sn_number = ?, note = ?, status = ?, Office_id = ?, equipmenttype_id = ? WHERE id = ?";
             PreparedStatement statement = connection.prepareStatement(sql);
@@ -87,7 +142,16 @@ public class EquipmentDAO {
             statement.setInt(6, officeId);
             statement.setInt(7, equipmentTypeId);
             statement.setInt(8, id);
-            return statement.executeUpdate() > 0;
+            int affectedRows = statement.executeUpdate();
+
+            if (affectedRows > 0) {
+                int responsibleId = getResponsibleIdByOfficeId(officeId);
+                String details = buildDetails(oldEq, newEq);
+                // ------------------ Логируем изменения ------------------
+                EquipmentHistoryDAO.addHistory(id, officeId, responsibleId, status, "Обновление", details);
+                return true;
+            }
+            return false;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -96,6 +160,23 @@ public class EquipmentDAO {
 
     public static boolean deleteEquipment(int id) {
         try (Connection connection = DatabaseHelper.getConnection()) {
+            String selectSql = "SELECT office_id, status FROM equipment WHERE id = ?";
+            PreparedStatement selectStmt = connection.prepareStatement(selectSql);
+            selectStmt.setInt(1, id);
+            ResultSet rs = selectStmt.executeQuery();
+            int officeId = rs.getInt("office_id");
+            String status = rs.getString("status");
+            int responsibleId = getResponsibleIdByOfficeId(officeId);
+
+            // -------- 3. Пишем в историю --------
+            EquipmentHistoryDAO.addHistory(
+                    id,
+                    officeId,
+                    responsibleId,
+                    status,
+                    "Удаление",
+                    "-"
+            );
             String sql = "DELETE FROM equipment WHERE id = ?";
             PreparedStatement statement = connection.prepareStatement(sql);
             statement.setInt(1, id);
@@ -123,22 +204,104 @@ public class EquipmentDAO {
         return false;
     }
 
-    public static boolean moveEquipment(int printerId, int newOfficeId, String note, String newStatus) {
-        String sql = "UPDATE equipment SET Office_id = ?, note = ?, status = ? WHERE id = ?";
+    public static boolean moveEquipment(int equipmentId, int newOfficeId, String note, String newStatus) {
+        // Сначала полностью получаем старое оборудование (отдельное соединение)
+        Equipment oldEq = getEquipmentById(equipmentId);
+        if (oldEq == null) return false;
 
-        try (Connection conn = DatabaseHelper.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
+        Equipment newEq = new Equipment(
+                equipmentId,
+                oldEq.getName(),
+                oldEq.getModel(),
+                oldEq.getSnNumber(),
+                note,
+                newStatus,
+                newOfficeId,
+                oldEq.getEquipmentTypeId()
+        );
+        try (Connection conn = DatabaseHelper.getConnection()) {
+            String sql = "UPDATE equipment SET Office_id = ?, note = ?, status = ? WHERE id = ?";
+            PreparedStatement pstmt = conn.prepareStatement(sql);
             pstmt.setInt(1, newOfficeId);
             pstmt.setString(2, note);
-            pstmt.setString(3,newStatus);
-            pstmt.setInt(4, printerId);
+            pstmt.setString(3, newStatus);
+            pstmt.setInt(4, equipmentId);
 
             int affectedRows = pstmt.executeUpdate();
-            return affectedRows > 0;
+            int responsibleId = getResponsibleIdByOfficeId(newOfficeId);
+            if (affectedRows > 0) {
+                String details = buildDetails(oldEq, newEq);
+                // ------------------ Логируем перемещение ------------------
+                EquipmentHistoryDAO.addHistory(equipmentId, newOfficeId, responsibleId, newStatus, "Перемещение", details);
+                return true;
+            }
+            return false;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
+    }
+
+    private static int getResponsibleIdByOfficeId(int officeId) {
+
+        int departmentId = OfficeDAO.getDepartmentIdByOfficeId(officeId);
+
+        SeniorDepartment senior =
+                SeniorDepartmentDAO.getByDepartmentId(departmentId);
+
+        if (senior == null) {
+            throw new RuntimeException("Материально ответственный не найден");
+        }
+
+        return senior.getId();
+    }
+
+    private static String getResponsibleFioByOfficeId(int officeId) {
+        int departmentId = OfficeDAO.getDepartmentIdByOfficeId(officeId);
+        SeniorDepartment senior = SeniorDepartmentDAO.getByDepartmentId(departmentId);
+        if (senior == null) {
+            throw new RuntimeException("Материально ответственный не найден");
+        }
+        return senior.getFio();
+    }
+
+    // Универсальный метод для формирования details
+    private static String buildDetails(Equipment oldEq, Equipment newEq) {
+        StringBuilder details = new StringBuilder();
+        // Кабинет
+        String oldOfficeNumber = OfficeDAO.getOfficeNumberById(oldEq.getOfficeId());
+        String newOfficeNumber = OfficeDAO.getOfficeNumberById(newEq.getOfficeId());
+        if (!oldOfficeNumber.equals(newOfficeNumber)) {
+            details.append("Кабинет: ").append(oldOfficeNumber)
+                    .append(" → ").append(newOfficeNumber).append("\n");
+        }
+
+        // ФИО материально ответственного
+        String oldFio = getResponsibleFioByOfficeId(oldEq.getOfficeId());
+        String newFio = getResponsibleFioByOfficeId(newEq.getOfficeId());
+        if (!oldFio.equals(newFio)) {
+            details.append("Ответственный: ").append(oldFio)
+                    .append(" → ").append(newFio).append("\n");
+        }
+        // Примечание
+        if (!oldEq.getNote().equals(newEq.getNote())) {
+            details.append("Примечание: '").append(oldEq.getNote())
+                    .append("' → '").append(newEq.getNote()).append("\n");
+        }
+        // Статус
+        if (!oldEq.getStatus().equals(newEq.getStatus())) {
+            details.append("Статус: ").append(oldEq.getStatus())
+                    .append(" → ").append(newEq.getStatus()).append("\n");
+        }
+        // Серийный номер
+        if (!oldEq.getSnNumber().equals(newEq.getSnNumber())) {
+            details.append("Серийный номер: ").append(oldEq.getSnNumber())
+                    .append(" → ").append(newEq.getSnNumber()).append("\n");
+        }
+        // Убираем последний "; "
+        if (!details.isEmpty()) {
+            details.setLength(details.length() - 1);
+        }
+        return details.toString();
     }
 }

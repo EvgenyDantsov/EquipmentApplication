@@ -68,4 +68,39 @@ public class OfficeDAO {
             return false;
         }
     }
+    public static int getDepartmentIdByOfficeId(int officeId) {
+
+        String sql = "SELECT Department_id FROM office WHERE id = ?";
+
+        try (Connection connection = DatabaseHelper.getConnection();
+             PreparedStatement pstmt = connection.prepareStatement(sql)) {
+
+            pstmt.setInt(1, officeId);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt("Department_id");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        throw new RuntimeException("Отдел не найден для офиса id = " + officeId);
+    }
+    public static String getOfficeNumberById(int officeId) {
+        String officeNumber = "";
+        String sql = "SELECT number_office FROM office WHERE id = ?";
+        try (Connection connection = DatabaseHelper.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, officeId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                officeNumber = rs.getString("number_office");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return officeNumber;
+    }
 }

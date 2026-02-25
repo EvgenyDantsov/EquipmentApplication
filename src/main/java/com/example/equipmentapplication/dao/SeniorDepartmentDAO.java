@@ -82,4 +82,27 @@ public class SeniorDepartmentDAO {
         }
         return false;
     }
+    public static SeniorDepartment getByDepartmentId(int departmentId) {
+        String sql = "SELECT * FROM seniordepartment WHERE Department_id = ?";
+
+        try (Connection conn = DatabaseHelper.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, departmentId);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return new SeniorDepartment(
+                        rs.getInt("id"),
+                        rs.getString("fio"),
+                        rs.getInt("department_id")
+                );
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
 }

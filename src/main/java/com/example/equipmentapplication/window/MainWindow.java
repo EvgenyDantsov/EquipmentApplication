@@ -68,7 +68,6 @@ public class MainWindow {
     private ComboBox<EquipmentType> equipmentTypeCombo; // NEW
     private ToolBar statusBar;
     private String activeStatusFilter = null;
-    //private UltrasoundSensorDAO ultrasoundSensorDao;
     private int ultrasoundTypeId = -1;
 
     public void start(Stage mainStage, Stage primaryStage) {
@@ -112,7 +111,9 @@ public class MainWindow {
         manageItem.setOnAction(e -> openEquipmentTypeWindow());
         MenuItem equipmentDictionaryItem = new MenuItem("Справочник оборудования");
         equipmentDictionaryItem.setOnAction(e -> openEquipmentDictionaryWindow());
-        dictionaryMenu.getItems().addAll(manageItem, equipmentDictionaryItem);
+        MenuItem ultrasoundSensorDictionaryItem = new MenuItem("Справочник УЗИ датчиков");
+        ultrasoundSensorDictionaryItem.setOnAction(e -> openUltrasoundSensorDictionaryWindow());
+        dictionaryMenu.getItems().addAll(manageItem, equipmentDictionaryItem, ultrasoundSensorDictionaryItem);
 
         //Отчеты
         Menu reportMenu = new Menu("Отчеты");
@@ -435,7 +436,7 @@ public class MainWindow {
                 moveEquipmentItem.setOnAction(e -> {
                     // Используем выбранную строку для перемещения
                     if (selectedRecord != null) {
-                        movePrinter();
+                        moveEquipment();
                     }
                 });
                 rowMenu.getItems().add(moveEquipmentItem);
@@ -458,13 +459,30 @@ public class MainWindow {
                     rowMenu.hide();
                 }
                 rowMenu.show(row, event.getScreenX(), event.getScreenY());
-            });
+                // Новый пункт: "Просмотреть историю"
+                MenuItem viewHistoryItem = new MenuItem("Просмотреть историю");
+                viewHistoryItem.setOnAction(e -> {
+                    MainRecord current = table.getSelectionModel().getSelectedItem();
+                    if (current != null) {
+                        // Создаем и открываем окно истории
+                        EquipmentHistoryWindow historyWindow = new EquipmentHistoryWindow(current.getEquipmentId());
+                        Stage historyStage = new Stage();
+                        historyWindow.start(historyStage, mainStage);
+                    }
+                });
+                rowMenu.getItems().add(viewHistoryItem);
 
+                // Показ меню
+                if (rowMenu.isShowing()) {
+                    rowMenu.hide();
+                }
+                rowMenu.show(row, event.getScreenX(), event.getScreenY());
+            });
             return row;
         });
     }
 
-    private void movePrinter() {
+    private void moveEquipment() {
         MainRecord selectedRecord = table.getSelectionModel().getSelectedItem();
         if (selectedRecord == null) {
             showErrorAlert(mainStage, "Ошибка", "Выберите оборудование для перемещения");
@@ -546,7 +564,6 @@ public class MainWindow {
 
                 // Формируем обновленное примечание
                 String updatedNote = noteField.getText();
-
                 // Если статус изменился, добавляем информацию в примечание
                 if (!selectedRecord.getStatus().equals(statusDb)) {
                     if (!updatedNote.isEmpty()) {
@@ -670,6 +687,17 @@ public class MainWindow {
         Stage equipmentDictionaryStage = new Stage();
         new EquipmentDictionaryWindow().start(equipmentDictionaryStage, parentStage);
         equipmentDictionaryStage.setOnHidden(event -> {
+            loadAllData();
+            setupFiltering();
+            updateStatusBar();
+        });
+    }
+
+    private void openUltrasoundSensorDictionaryWindow() { // UPDATED
+        Stage parentStage = (Stage) table.getScene().getWindow();
+        Stage ultrasoundSensorDictionaryStage = new Stage();
+        new UltrasoundSensorDictionaryWindow().start(ultrasoundSensorDictionaryStage, parentStage);
+        ultrasoundSensorDictionaryStage.setOnHidden(event -> {
             loadAllData();
             setupFiltering();
             updateStatusBar();
@@ -829,7 +857,7 @@ public class MainWindow {
             sheet.autoSizeColumn(i);
             // Увеличиваем ширину столбца на 2 символа для корректного отображения
             int currentWidth = sheet.getColumnWidth(i);
-            int newWidth = currentWidth + 2 * 256; // 1 символ = 256 единиц 
+            int newWidth = currentWidth + 2 * 256; // 1 символ = 256 единиц
             sheet.setColumnWidth(i, newWidth);
         }
         sheet.autoSizeColumn(sensorsColumnIndex);

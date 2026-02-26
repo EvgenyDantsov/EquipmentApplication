@@ -11,7 +11,6 @@ public class MainRecord {
     private String status;
     private String fio;
     private int equipmentTypeId;
-
     private int equipmentId;
 
     public MainRecord(String nameOffice, String numberOffice, String nameDepartment,
@@ -24,7 +23,7 @@ public class MainRecord {
         this.model = model;
         this.snNumber = snNumber;
         this.note = note;
-        this.status=status;
+        this.status = status;
         this.fio = fio;
     }
 
@@ -56,6 +55,7 @@ public class MainRecord {
     public String getNote() {
         return note;
     }
+
     public String getStatus() {
         return status;
     }
@@ -63,6 +63,7 @@ public class MainRecord {
     public String getFio() {
         return fio;
     }
+
     public int getEquipmentId() {
         return equipmentId;
     }
@@ -70,9 +71,11 @@ public class MainRecord {
     public void setEquipmentId(int equipmentId) {
         this.equipmentId = equipmentId;
     }
+
     public int getEquipmentTypeId() {
         return equipmentTypeId;
     }
+
     public void setEquipmentTypeId(int equipmentTypeId) {
         this.equipmentTypeId = equipmentTypeId;
     }

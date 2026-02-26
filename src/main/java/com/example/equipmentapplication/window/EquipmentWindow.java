@@ -1,9 +1,6 @@
 package com.example.equipmentapplication.window;
 
-import com.example.equipmentapplication.dao.EquipmentTypeDAO;
-import com.example.equipmentapplication.dao.OfficeDAO;
-import com.example.equipmentapplication.dao.EquipmentDAO;
-import com.example.equipmentapplication.dao.EquipmentDictionaryDAO;
+import com.example.equipmentapplication.dao.*;
 
 import com.example.equipmentapplication.dto.EquipmentType;
 import com.example.equipmentapplication.dto.Office;
@@ -57,7 +54,7 @@ public class EquipmentWindow {
         equipmentStage.setTitle("Оборудование");
         officeList = FXCollections.observableArrayList();
         loadOffice();
-        equipmentList=FXCollections.observableArrayList();
+        equipmentList = FXCollections.observableArrayList();
         // Инициализация таблицы
         table = new TableView<>();
         table.setItems(equipmentList);
@@ -249,6 +246,7 @@ public class EquipmentWindow {
         equipmentStage.setOnShown(event -> centerStageOnParent(equipmentStage, parentStage));
         equipmentStage.show();
     }
+
     private int findOfficeIdByNumber(String number) {
         return officeList.stream()
                 .filter(o -> o.getNumberOffice().equals(number))
@@ -256,6 +254,7 @@ public class EquipmentWindow {
                 .findFirst()
                 .orElse(0); // 0 если не найдено
     }
+
     // Загрузка данных из базы данных в таблицу
     private void loadEquipment() {
         if (initialTypeId != 0) {
@@ -267,15 +266,19 @@ public class EquipmentWindow {
         }
         table.setItems(equipmentList);
     }
+
     public void setInitialTypeId(int id) {
         this.initialTypeId = id;
     }
+
     public void setInitialTypeName(String name) {
         this.initialTypeName = name;
     }
+
     private void loadEquipmentTypes() {
         equipmentTypeList.setAll(EquipmentTypeDAO.getAllEquipmentTypes());
     }
+
     // Метод для фильтрации таблицы по номеру кабинета
     private void filterTableByOfficeNumber(String officeNumber) {
         ObservableList<Equipment> filteredList = equipmentList.filtered(p -> {
@@ -338,7 +341,7 @@ public class EquipmentWindow {
             showErrorAlert(equipmentStage, ERROR_TITLE, SN_NUMBER_UNIQUE);
             return;
         }
-        if (EquipmentDAO.updateEquipment(selectedEquipment.getId(), equipmentFormData.name, equipmentFormData.model, equipmentFormData.snNumber, equipmentFormData.note, status, equipmentFormData.office.getId(),equipmentFormData.equipmentType.getId())) {
+        if (EquipmentDAO.updateEquipment(selectedEquipment.getId(), equipmentFormData.name, equipmentFormData.model, equipmentFormData.snNumber, equipmentFormData.note, status, equipmentFormData.office.getId(), equipmentFormData.equipmentType.getId())) {
             loadEquipment();
             clearFields();
         } else {
@@ -370,17 +373,17 @@ public class EquipmentWindow {
 
     private boolean validateFields() {
         clearFieldStyles(snNumberField);
-        clearComboBoxStyle(nameComboBox, modelComboBox,officeComboBox);
+        clearComboBoxStyle(nameComboBox, modelComboBox, officeComboBox);
 
         boolean isValid = true;
 
-        if (nameComboBox.getValue()==null ||
-                modelComboBox.getValue()==null ||
+        if (nameComboBox.getValue() == null ||
+                modelComboBox.getValue() == null ||
                 snNumberField.getText().isEmpty() ||
                 officeComboBox.getValue() == null) {
 
             highlightInvalidFields(snNumberField);
-            highlightInvalidComboBox(nameComboBox,modelComboBox, officeComboBox);
+            highlightInvalidComboBox(nameComboBox, modelComboBox, officeComboBox);
             showErrorAlert(equipmentStage, ERROR_TITLE, FILL_REQUIRED_FIELDS);
             isValid = false;
         }
@@ -448,6 +451,7 @@ public class EquipmentWindow {
         officeComboBox.getSelectionModel().clearSelection();
         equipmentTypeField.setText(initialTypeName != null ? initialTypeName : "");
     }
+
     private String getStatusFromComboBox() {
         String selectedStatus = statusComboBox.getValue();
         return switch (selectedStatus) {

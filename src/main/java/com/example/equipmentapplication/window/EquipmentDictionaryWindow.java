@@ -207,7 +207,7 @@ public class EquipmentDictionaryWindow {
             loadDictionary();
             clearFields();
         } else {
-            showErrorAlert(equipmentDictionaryStage, ERROR_TITLE,FILL_REQUIRED_FIELDS);
+            showErrorAlert(equipmentDictionaryStage, ERROR_TITLE, FILL_REQUIRED_FIELDS);
         }
     }
 
@@ -219,6 +219,7 @@ public class EquipmentDictionaryWindow {
                 .findFirst().orElse(null);
         equipmentTypeComboBox.setValue(type);
     }
+
     private boolean validateFields() {
         clearFieldStyles(nameField, modelField);
         clearComboBoxStyle(equipmentTypeComboBox);
@@ -237,11 +238,13 @@ public class EquipmentDictionaryWindow {
 
         return isValid;
     }
+
     private void clearFields() {
         nameField.clear();
         modelField.clear();
         equipmentTypeComboBox.getSelectionModel().clearSelection();
     }
+
     private void setupValidationListeners() {
         nameField.textProperty().addListener((obs, oldVal, newVal) -> clearFieldStyles(nameField));
         modelField.textProperty().addListener((obs, oldVal, newVal) -> clearFieldStyles(modelField));

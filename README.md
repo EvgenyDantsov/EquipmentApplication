@@ -36,20 +36,25 @@ src/java/com/example/equipmentapplication/
 ├── dao/
 │ ├── DepartmentDAO.java
 │ ├── EquipmentDAO.java
+│ ├── EquipmentHistoryDAO.java
 │ ├── EquipmentDictionaryDAO.java
 │ ├── EquipmentTypeDAO.java
 │ ├── OfficeDAO.java
 │ ├── SeniorDepartmentDAO.java
-│ └── UltrasoundSensorDAO.java
+│ ├── UltrasoundSensorDAO.java
+│ └── UltrasoundSensorDictionaryDAO.java
 │
 ├── dto/
 │ ├── Department.java
 │ ├── Equipment.java
 │ ├── EquipmentDictionary.java
+│ ├── EquipmentHistory.java
 │ ├── EquipmentType.java
+│ ├── MainRecord.java
 │ ├── Office.java
 │ ├── SeniorDepartment.java
-│ └── UltrasoundSensor.java
+│ ├── UltrasoundSensor.java
+│ └── UltrasoundSensorDictionary.java
 │
 ├── util/
 │ ├── AlertUtils.java
@@ -58,12 +63,14 @@ src/java/com/example/equipmentapplication/
 ├── window/
 │ ├── DepartmentWindow.java
 │ ├── EquipmentDictionaryWindow.java
+│ ├── EquipmentHistoryWindow.java
 │ ├── EquipmentTypeWindow.java
 │ ├── EquipmentWindow.java
 │ ├── LoadingWindow.java
 │ ├── MainWindow.java
 │ ├── OfficeWindow.java
 │ ├── SeniorDepartmentWindow.java
+│ ├── UltrasoundSensorDictionaryWindow.java
 │ └── UltrasoundSensorWindow.java
 │
 ├── DatabaseHelper.java
@@ -84,13 +91,11 @@ erDiagram
     SENIORDEPARTMENT {
         int id
         string fio
-        int Department_id
     }
     OFFICE {
         int id
         string number_office
         string name_office
-        int Department_id
     }
     EQUIPMENTTYPE {
         int id
@@ -100,7 +105,13 @@ erDiagram
         int id
         string name
         string model
-        int equipmenttype_id
+    }
+    EQUIPMENT_HISTORY {
+        int id
+        string status
+        string action
+        datetime change_date
+        text details
     }
     EQUIPMENT {
         int id
@@ -109,8 +120,6 @@ erDiagram
         string sn_number
         string note
         enum status
-        int Office_id
-        int equipmenttype_id
     }
     ULTRASOUNDSENSORS {
         int id
@@ -120,20 +129,27 @@ erDiagram
         string note
         int equipment_id
     }
+    ULTRASOUNDSENSOR_DICTIONARY {
+        int id
+        string name
+        string type
+    }
 
     DEPARTMENT ||--o{ SENIORDEPARTMENT : ""
     DEPARTMENT ||--o{ OFFICE : ""
-    EQUIPMENTTYPE ||--o{ EQUIPMENTDICTIONARY : ""
-    EQUIPMENTTYPE ||--o{ EQUIPMENT : ""
+    SENIORDEPARTMENT ||--o{ EQUIPMENT_HISTORY : ""
     OFFICE ||--o{ EQUIPMENT : ""
+    EQUIPMENTTYPE ||--o{ EQUIPMENT : ""
+    EQUIPMENTTYPE ||--o{ EQUIPMENTDICTIONARY : ""
     EQUIPMENT ||--o{ ULTRASOUNDSENSORS : ""
+    ULTRASOUNDSENSOR_DICTIONARY ||--o{ ULTRASOUNDSENSORS : ""
+    EQUIPMENT ||--o{ EQUIPMENT_HISTORY : ""
 ```
 ---
 🖼️ Interface Example
-(insert your screenshot here)
 ![screenshot.png](src/main/java/images/screenshot.png)
 ---
 👨‍💻 Author
-Author: Evgeny Dantsov
-License: MIT
-Project type: Work-use application
+- Author: Evgeny Dantsov
+- License: MIT
+- Project type: Work-use application

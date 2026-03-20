@@ -52,11 +52,10 @@ public class EquipmentHistoryDAO {
     }
 
     // Вставка новой записи в историю
-    public static boolean addHistory(int equipmentId, int officeId, int responsibleId, String status, String action, String details) {
+    public static boolean addHistory(Connection connection, int equipmentId, int officeId, int responsibleId, String status, String action, String details) {
         String sql = "INSERT INTO equipment_history (equipment_id, office_id, responsible_id, status, action, details) VALUES (?, ?, ?, ?, ?, ?)";
 
-        try (Connection connection = DatabaseHelper.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setInt(1, equipmentId);
             statement.setInt(2, officeId);

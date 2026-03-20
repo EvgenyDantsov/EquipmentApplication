@@ -360,7 +360,7 @@ public class EquipmentWindow {
             loadEquipment();
             clearFields();
         } else {
-            showErrorAlert(equipmentStage, ERROR_TITLE, FILL_REQUIRED_FIELDS);
+            showErrorAlert(equipmentStage, ERROR_TITLE, SELECT_EQUIPMENT_TO_DELETE);
         }
     }
 

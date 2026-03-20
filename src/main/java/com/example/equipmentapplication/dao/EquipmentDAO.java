@@ -100,7 +100,7 @@ public class EquipmentDAO {
     public static boolean addEquipment(String name, String model, String snNumber, String note, String status, int officeId, int equipmentTypeId) {
         try (Connection connection = DatabaseHelper.getConnection()) {
             String sql = "INSERT INTO equipment (name, model, sn_number, note, status, Office_id, equipmenttype_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            PreparedStatement statement = connection.prepareStatement(sql);
+            PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             statement.setString(1, name);
             statement.setString(2, model);
             statement.setString(3, snNumber);
@@ -117,7 +117,7 @@ public class EquipmentDAO {
                     int equipmentId = generatedKeys.getInt(1);
                     int responsibleId = getResponsibleIdByOfficeId(officeId);
                     // Создаём запись в истории
-                    EquipmentHistoryDAO.addHistory(equipmentId, officeId, responsibleId, status, "Добавление", "-");
+                    EquipmentHistoryDAO.addHistory(connection, equipmentId, officeId, responsibleId, status, "Добавление", "-");
                 }
                 return true;
             }
@@ -148,7 +148,7 @@ public class EquipmentDAO {
                 int responsibleId = getResponsibleIdByOfficeId(officeId);
                 String details = buildDetails(oldEq, newEq);
                 // ------------------ Логируем изменения ------------------
-                EquipmentHistoryDAO.addHistory(id, officeId, responsibleId, status, "Обновление", details);
+                EquipmentHistoryDAO.addHistory(connection,id, officeId, responsibleId, status, "Обновление", details);
                 return true;
             }
             return false;
@@ -160,23 +160,12 @@ public class EquipmentDAO {
 
     public static boolean deleteEquipment(int id) {
         try (Connection connection = DatabaseHelper.getConnection()) {
-            String selectSql = "SELECT office_id, status FROM equipment WHERE id = ?";
-            PreparedStatement selectStmt = connection.prepareStatement(selectSql);
-            selectStmt.setInt(1, id);
-            ResultSet rs = selectStmt.executeQuery();
-            int officeId = rs.getInt("office_id");
-            String status = rs.getString("status");
-            int responsibleId = getResponsibleIdByOfficeId(officeId);
-
-            // -------- 3. Пишем в историю --------
-            EquipmentHistoryDAO.addHistory(
-                    id,
-                    officeId,
-                    responsibleId,
-                    status,
-                    "Удаление",
-                    "-"
-            );
+            // 1. Удаляем историю
+            String deleteHistorySql = "DELETE FROM equipment_history WHERE equipment_id = ?";
+            try (PreparedStatement stmt = connection.prepareStatement(deleteHistorySql)) {
+                stmt.setInt(1, id);
+                stmt.executeUpdate();
+            }
             String sql = "DELETE FROM equipment WHERE id = ?";
             PreparedStatement statement = connection.prepareStatement(sql);
             statement.setInt(1, id);
@@ -232,7 +221,7 @@ public class EquipmentDAO {
             if (affectedRows > 0) {
                 String details = buildDetails(oldEq, newEq);
                 // ------------------ Логируем перемещение ------------------
-                EquipmentHistoryDAO.addHistory(equipmentId, newOfficeId, responsibleId, newStatus, "Перемещение", details);
+                EquipmentHistoryDAO.addHistory(conn, equipmentId, newOfficeId, responsibleId, newStatus, "Перемещение", details);
                 return true;
             }
             return false;

@@ -12,12 +12,12 @@ public class DatabaseHelper {
     private static Connection connection;
 
     public static Connection getConnection() throws SQLException {
-        if (connection == null || connection.isClosed()) {
-            String url = Config.get("URL_SQL");
-            String user = Config.get("USER_NAME_SQL");
-            String password = Config.get("PASSWORD_SQL");
-            connection = DriverManager.getConnection(url, user, password);
-        }
+        //if (connection == null || connection.isClosed()) {
+        String url = Config.get("URL_SQL");
+        String user = Config.get("USER_NAME_SQL");
+        String password = Config.get("PASSWORD_SQL");
+        connection = DriverManager.getConnection(url, user, password);
+        // }
         return connection;
     }
 

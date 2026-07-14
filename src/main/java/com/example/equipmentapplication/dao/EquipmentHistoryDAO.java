@@ -95,4 +95,20 @@ public class EquipmentHistoryDAO {
                 officeNumber, officeName,
                 responsibleFio, departmentName,details);
     }
+    public static boolean deleteHistoryById(int id) {
+
+        String sql = "DELETE FROM equipment_history WHERE id = ?";
+
+        try (Connection conn = DatabaseHelper.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, id);
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

@@ -8,9 +8,10 @@ public class Equipment {
     private String note;
     private int officeId;
     private String status;
+    private String qrCode;
     private int equipmentTypeId;
 
-    public Equipment(int id, String name, String model, String snNumber, String note, String status, int officeId, int equipmentTypeId) {
+    public Equipment(int id, String name, String model, String snNumber, String note, String status, int officeId, int equipmentTypeId, String qrCode) {
         this.id = id;
         this.name = name;
         this.model = model;
@@ -18,7 +19,8 @@ public class Equipment {
         this.note = note;
         this.officeId = officeId;
         this.status = status;
-        this.equipmentTypeId=equipmentTypeId;
+        this.equipmentTypeId = equipmentTypeId;
+        this.qrCode = qrCode;
     }
 
     public int getId() {
@@ -37,6 +39,10 @@ public class Equipment {
         return snNumber;
     }
 
+    public String getQrCode() {
+        return qrCode;
+    }
+
     public String getNote() {
         return note;
     }
@@ -48,6 +54,7 @@ public class Equipment {
     public String getStatus() {
         return status;
     }
+
     public int getEquipmentTypeId() {
         return equipmentTypeId;
     }

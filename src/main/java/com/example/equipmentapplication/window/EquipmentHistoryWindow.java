@@ -2,7 +2,6 @@ package com.example.equipmentapplication.window;
 
 import com.example.equipmentapplication.dao.EquipmentHistoryDAO;
 import com.example.equipmentapplication.dto.EquipmentHistory;
-import com.example.equipmentapplication.util.WindowUtils;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -17,6 +16,7 @@ import javafx.stage.Stage;
 
 import java.util.Collections;
 
+import static com.example.equipmentapplication.util.AlertUtils.showErrorAlert;
 import static com.example.equipmentapplication.util.WindowUtils.*;
 
 public class EquipmentHistoryWindow {
@@ -25,6 +25,9 @@ public class EquipmentHistoryWindow {
     private Stage historyStage;
     private int equipmentId;
     private static final String WINDOW_TITLE = "История оборудования";
+    private static final String ERROR_TITLE = "Ошибка";
+    private static final String SELECT_HISTORY_TO_DELETE = "Выберите запись для удаления";
+    private static final String ERROR_HISTORY_TO_DELETE = "Ошибка удаления истории";
 
     public EquipmentHistoryWindow(int equipmentId) {
         this.equipmentId = equipmentId;
@@ -67,9 +70,11 @@ public class EquipmentHistoryWindow {
         detailsColumn.setPrefWidth(350);
         detailsColumn.setCellFactory(tc -> new TableCell<>() {
             private final Text text = new Text();
+
             {
                 text.wrappingWidthProperty().bind(tc.widthProperty().subtract(10));
             }
+
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
@@ -83,17 +88,19 @@ public class EquipmentHistoryWindow {
                 }
             }
         });
-        Collections.addAll(table.getColumns(),officeIdColumn, officeNameColumn, nameColumn, modelColumn,
+        Collections.addAll(table.getColumns(), officeIdColumn, officeNameColumn, nameColumn, modelColumn,
                 statusColumn, dateColumn, fioColumn, departmentColumn, actionColumn, detailsColumn);
         //table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         // Загружаем историю
         loadHistory();
-
+        Button deleteButton = new Button("Удалить");
+        deleteButton.setOnAction(e -> deleteHistoryRecord());
+        HBox buttonDelete = new HBox(10, deleteButton);
         Button closeButton = new Button("Закрыть");
         closeButton.setOnAction(e -> historyStage.close());
         HBox buttonBox = new HBox(closeButton);
         buttonBox.setAlignment(Pos.CENTER);
-        VBox layout = new VBox(10, table, buttonBox);
+        VBox layout = new VBox(10, table, buttonDelete, buttonBox);
         layout.setPadding(new Insets(10));
         Scene scene = new Scene(layout, 1200, 400);
         scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
@@ -106,5 +113,23 @@ public class EquipmentHistoryWindow {
     private void loadHistory() {
         historyList.setAll(EquipmentHistoryDAO.getHistoryByEquipmentId(equipmentId));
         table.setItems(historyList);
+    }
+
+    private void deleteHistoryRecord() {
+
+        EquipmentHistory selected = table.getSelectionModel().getSelectedItem();
+
+        if (selected == null) {
+            showErrorAlert(historyStage, ERROR_TITLE, SELECT_HISTORY_TO_DELETE);
+            return;
+        }
+
+        boolean success = EquipmentHistoryDAO.deleteHistoryById(selected.getId());
+
+        if (success) {
+            loadHistory(); // обновляем таблицу
+        } else {
+            showErrorAlert(historyStage, ERROR_TITLE, ERROR_HISTORY_TO_DELETE);
+        }
     }
 }

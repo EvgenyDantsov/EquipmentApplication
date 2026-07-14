@@ -13,6 +13,8 @@ target/
 *.iws
 *.iml
 *.ipr
+# Configuration
+**/config.properties
 
 # ����� MySQL Workbench
 Print.mwb

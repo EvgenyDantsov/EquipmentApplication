@@ -6,6 +6,13 @@ module com.example.equipmentapplication {
     requires java.base;
     requires org.apache.poi.poi;
     requires org.apache.poi.ooxml;
+    requires com.google.zxing;
+    requires com.google.zxing.javase;
+    requires java.desktop;
+    requires javafx.swing;
+    requires telegrambots;
+    requires telegrambots.meta;
+    requires com.fasterxml.jackson.databind;
 
     opens com.example.equipmentapplication to javafx.fxml;
     exports com.example.equipmentapplication;

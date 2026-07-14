@@ -9,6 +9,8 @@ import com.example.equipmentapplication.dao.UltrasoundSensorDAO;
 import com.example.equipmentapplication.dto.EquipmentType;
 import com.example.equipmentapplication.dto.MainRecord;
 import com.example.equipmentapplication.dto.Office;
+import com.example.equipmentapplication.util.QRCodeGenerator;
+import com.example.equipmentapplication.util.QRCodeViewer;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -27,11 +29,14 @@ import javafx.util.StringConverter;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.util.Units;
+import org.apache.poi.xssf.usermodel.XSSFDrawing;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xwpf.usermodel.*;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.math.BigInteger;
 import java.net.URL;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -119,7 +124,10 @@ public class MainWindow {
         Menu reportMenu = new Menu("Отчеты");
         MenuItem genReport = new MenuItem("Сформировать отчет");
         genReport.setOnAction(e -> generateReport());
+        MenuItem qrCodeReport = new MenuItem("Сформировать QR-этикетки");
+        qrCodeReport.setOnAction(e -> generateQrLabels());
         reportMenu.getItems().add(genReport);
+        reportMenu.getItems().add(qrCodeReport);
         // Добавляем меню в меню-бар
         menuBar.getMenus().addAll(fileMenu, equipmentMenu, orgMenu, dictionaryMenu, reportMenu);
         // Создание кнопок для работы с таблицами
@@ -163,6 +171,12 @@ public class MainWindow {
                 resetFilters();
             }
         });
+        Button refreshButton = new Button("\uD83D\uDD04");
+        refreshButton.getStyleClass().add("refresh-button");
+        refreshButton.setOnAction(e -> {
+            loadAllData();
+            updateStatusBar();
+        });
         statusBar = createStatusBar();
         Button closeButton = new Button("Выход");
         closeButton.getStyleClass().add("exit-button");
@@ -171,10 +185,12 @@ public class MainWindow {
         // Создание колонок таблицы
         TableColumn<MainRecord, String> officeNameColumn = new TableColumn<>("Название кабинета");
         officeNameColumn.setCellValueFactory(new PropertyValueFactory<>("nameOffice"));
+        officeNameColumn.setPrefWidth(170);
         TableColumn<MainRecord, String> numberOfficeColumn = new TableColumn<>("Кабинет");
         numberOfficeColumn.setCellValueFactory(new PropertyValueFactory<>("numberOffice"));
         TableColumn<MainRecord, String> departmentColumn = new TableColumn<>("Отделение");
         departmentColumn.setCellValueFactory(new PropertyValueFactory<>("nameDepartment"));
+        departmentColumn.setPrefWidth(150);
         TableColumn<MainRecord, String> equipmentColumn = new TableColumn<>("Оборудование");
         equipmentColumn.setStyle("-fx-alignment: CENTER;");
         equipmentColumn.setCellValueFactory(new PropertyValueFactory<>("nameEquipment"));
@@ -196,7 +212,7 @@ public class MainWindow {
         filteredData = new FilteredList<>(allDataList, p -> true);
         table.setItems(filteredData);
         // Размещение кнопок в верхней части окна (горизонтально)
-        HBox filterControls = new HBox(10, equipmentTypeCombo);
+        HBox filterControls = new HBox(10, equipmentTypeCombo, refreshButton);
         filterControls.setAlignment(Pos.CENTER_LEFT);
         filterControls.setPadding(new Insets(10));
         filterControls.getStyleClass().add("top-buttons");
@@ -445,33 +461,50 @@ public class MainWindow {
                 if (selectedRecord.getEquipmentTypeId() == ultrasoundTypeId) {
                     MenuItem viewSensorsItem = new MenuItem("Просмотреть датчики");
                     viewSensorsItem.setOnAction(e -> {
-                        MainRecord current = table.getSelectionModel().getSelectedItem();
-                        if (current != null) {
-                            UltrasoundSensorWindow sensorWindow = new UltrasoundSensorWindow(current.getEquipmentId());
+                        //MainRecord current = table.getSelectionModel().getSelectedItem();
+                        if (selectedRecord != null) {
+                            UltrasoundSensorWindow sensorWindow = new UltrasoundSensorWindow(selectedRecord.getEquipmentId());
                             Stage sensorStage = new Stage();
                             sensorWindow.start(sensorStage, mainStage); // открываем поверх главного окна
                         }
                     });
                     rowMenu.getItems().add(viewSensorsItem);
                 }
-                // Закрываем, если меню уже открыто (чтобы не копилось)
-                if (rowMenu.isShowing()) {
-                    rowMenu.hide();
-                }
-                rowMenu.show(row, event.getScreenX(), event.getScreenY());
                 // Новый пункт: "Просмотреть историю"
                 MenuItem viewHistoryItem = new MenuItem("Просмотреть историю");
                 viewHistoryItem.setOnAction(e -> {
-                    MainRecord current = table.getSelectionModel().getSelectedItem();
-                    if (current != null) {
+                    //MainRecord current = table.getSelectionModel().getSelectedItem();
+                    if (selectedRecord != null) {
                         // Создаем и открываем окно истории
-                        EquipmentHistoryWindow historyWindow = new EquipmentHistoryWindow(current.getEquipmentId());
+                        EquipmentHistoryWindow historyWindow = new EquipmentHistoryWindow(selectedRecord.getEquipmentId());
                         Stage historyStage = new Stage();
                         historyWindow.start(historyStage, mainStage);
                     }
                 });
                 rowMenu.getItems().add(viewHistoryItem);
+                // Пункт "История ремонтов"
+                MenuItem repairItem = new MenuItem("История ремонтов");
+                repairItem.setOnAction(e -> {
+                    //MainRecord current = table.getSelectionModel().getSelectedItem();
+                    if (selectedRecord != null) {
+                        EquipmentRepairWindow repairWindow =
+                                new EquipmentRepairWindow(selectedRecord.getEquipmentId());
+                        Stage repairStage = new Stage();
+                        repairWindow.start(repairStage, mainStage);
+                    }
+                });
+                rowMenu.getItems().add(repairItem);
 
+                MenuItem viewQrItem = new MenuItem("Просмотреть QR");
+
+                viewQrItem.setOnAction(e -> {
+                    //MainRecord current = table.getSelectionModel().getSelectedItem();
+                    if (selectedRecord != null) {
+                        QRCodeViewer.show(selectedRecord.getQrCode());
+                    }
+                });
+
+                rowMenu.getItems().add(viewQrItem);
                 // Показ меню
                 if (rowMenu.isShowing()) {
                     rowMenu.hide();
@@ -789,6 +822,8 @@ public class MainWindow {
         // Создаем новый workbook и лист
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Отчет");
+        XSSFDrawing drawing = (XSSFDrawing) sheet.createDrawingPatriarch();
+        CreationHelper helper = workbook.getCreationHelper();
         // Создаем заголовки столбцов
         Row headerRow = sheet.createRow(0);
         for (int i = 0; i <= 3; i++) { // 0..3 включительно = до "Модель"
@@ -796,13 +831,14 @@ public class MainWindow {
             cell.setCellValue(table.getColumns().get(i).getText());
         }
 
-// Вставляем новый заголовок "Датчики"
-        Cell sensorsHeaderCell = headerRow.createCell(4);
+        Cell qrHeader = headerRow.createCell(4);
+        qrHeader.setCellValue("QR-код");
+        // Вставляем новый заголовок "Датчики"
+        Cell sensorsHeaderCell = headerRow.createCell(5);
         sensorsHeaderCell.setCellValue("Датчики");
-
 // Копируем оставшиеся заголовки с TableView, сдвигаем индекс на +1
         for (int i = 4; i < table.getColumns().size(); i++) {
-            Cell cell = headerRow.createCell(i + 1);
+            Cell cell = headerRow.createCell(i + 2);
             cell.setCellValue(table.getColumns().get(i).getText());
         }
 
@@ -814,9 +850,32 @@ public class MainWindow {
             row.createCell(1).setCellValue(record.getNameOffice());
             row.createCell(2).setCellValue(record.getNameEquipment());
             row.createCell(3).setCellValue(record.getModel());
+// ---------------- QR CODE ----------------
+            try {
+                String qrText = record.getQrCode();
 
+                byte[] imageBytes = QRCodeGenerator.generateQRCodeBytes("https://t.me/testNewRSbot?start="+ qrText);
+
+                int pictureIndex = workbook.addPicture(imageBytes, Workbook.PICTURE_TYPE_PNG);
+
+                ClientAnchor anchor = helper.createClientAnchor();
+                anchor.setRow1(i + 1);
+                anchor.setRow2(i + 2);
+                anchor.setCol1(4);
+                anchor.setCol2(5);
+
+                Picture pict = drawing.createPicture(anchor, pictureIndex);
+                // 🔥 ДЕЛАЕМ QR "КВАДРАТНЫМ"
+                pict.resize(1);
+
+                // 🔥 фикс высоты строки под QR
+                row.setHeightInPoints(60);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             // --- НОВЫЙ СТОЛБЕЦ ДАТЧИКОВ (после модели) ---
-            Cell sensorsCell;
+            Cell sensorsCell= row.createCell(5);
             if (record.getEquipmentTypeId() == ultrasoundTypeId) {
                 List<UltrasoundSensor> sensors =
                         UltrasoundSensorDAO.getSensorsByEquipmentId(record.getEquipmentId());
@@ -825,7 +884,7 @@ public class MainWindow {
                         .map(s -> s.getSensorName() + " (sn:" + s.getSnNumber() + ")" + "Тип: " + s.getSensorType())
                         .collect(Collectors.joining("\n"));
 
-                sensorsCell = row.createCell(4);
+                //sensorsCell = row.createCell(5);
                 sensorsCell.setCellValue(sensorsInfo);
 
                 // Включаем перенос строк
@@ -835,37 +894,42 @@ public class MainWindow {
 
                 // Устанавливаем высоту строки
                 if (!sensors.isEmpty()) {
-                    float baseHeight = sheet.getDefaultRowHeightInPoints();
-                    row.setHeightInPoints(baseHeight * sensors.size());
+                    row.setHeightInPoints(Math.max(row.getHeightInPoints(),
+                            18f * sensors.size()));
                 }
             } else {
-                sensorsCell = row.createCell(4);
+                //sensorsCell = row.createCell(5);
                 sensorsCell.setCellValue("-"); // пустое значение для других типов
             }
 
             // Сдвигаем остальные колонки на +1
-            row.createCell(5).setCellValue(record.getSnNumber());
-            row.createCell(6).setCellValue(record.getNameDepartment());
-            row.createCell(7).setCellValue(record.getNote());
+            row.createCell(6).setCellValue(record.getSnNumber());
+            row.createCell(7).setCellValue(record.getNameDepartment());
+            row.createCell(8).setCellValue(record.getNote());
             String statusInRussian = getStatusDisplayName(record.getStatus());
-            row.createCell(8).setCellValue(statusInRussian);
-            row.createCell(9).setCellValue(record.getFio());
+            row.createCell(9).setCellValue(statusInRussian);
+            row.createCell(10).setCellValue(record.getFio());
         }
-        int sensorsColumnIndex = table.getColumns().size();
+        int totalCols = 11;
         // Авторазмер для всех столбцов
-        for (int i = 0; i < table.getColumns().size(); i++) {
+        for (int i = 0; i < totalCols; i++) {
             sheet.autoSizeColumn(i);
             // Увеличиваем ширину столбца на 2 символа для корректного отображения
             int currentWidth = sheet.getColumnWidth(i);
             int newWidth = currentWidth + 2 * 256; // 1 символ = 256 единиц
             sheet.setColumnWidth(i, newWidth);
         }
-        sheet.autoSizeColumn(sensorsColumnIndex);
-        int sensorsWidth = sheet.getColumnWidth(sensorsColumnIndex);
-        sheet.setColumnWidth(sensorsColumnIndex, sensorsWidth + 2 * 256);
-        // Создаем таблицу в Excel
-        CellRangeAddress range = new CellRangeAddress(0, allDataList.size(), 0, table.getColumns().size());
+//        sheet.autoSizeColumn(sensorsColumnIndex);
+//        int sensorsWidth = sheet.getColumnWidth(sensorsColumnIndex);
+//        sheet.setColumnWidth(sensorsColumnIndex, sensorsWidth + 2 * 256);
+        // ---------------- FILTER ----------------
+        CellRangeAddress range =
+                new CellRangeAddress(0, allDataList.size(), 0, totalCols - 1);
+
         sheet.setAutoFilter(range);
+        // Создаем таблицу в Excel
+//        CellRangeAddress range = new CellRangeAddress(0, allDataList.size(), 0, table.getColumns().size());
+//        sheet.setAutoFilter(range);
         // Формируем имя файла с текущей датой
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
         String fileName = "Отчет_" + LocalDate.now().format(formatter) + ".xlsx";
@@ -885,6 +949,128 @@ public class MainWindow {
                 e.printStackTrace();
                 showErrorAlert(parentStage, "Ошибка", "Не удалось сохранить отчет.");
             }
+        }
+    }
+    private void generateQrLabels() {
+
+        Stage parentStage =
+                (Stage) table.getScene().getWindow();
+
+        try {
+
+            XWPFDocument document = new XWPFDocument();
+
+            // ---------- PAGE SIZE ----------
+            CTSectPr sectPr =
+                    document.getDocument()
+                            .getBody()
+                            .addNewSectPr();
+
+            CTPageSz pageSize = sectPr.addNewPgSz();
+
+            // размеры страницы
+            // Word использует TWIPS
+
+            int width = (int) (4.25 * 567);
+            int height = (int) (2.5 * 567);
+
+            pageSize.setW(BigInteger.valueOf(width));
+            pageSize.setH(BigInteger.valueOf(height));
+
+            // ---------- MARGINS ----------
+            CTPageMar pageMar = sectPr.addNewPgMar();
+
+            int margin = 57; // ~0.1 см
+
+            pageMar.setTop(BigInteger.valueOf(margin));
+            pageMar.setBottom(BigInteger.valueOf(margin));
+            pageMar.setLeft(BigInteger.valueOf(margin));
+            pageMar.setRight(BigInteger.valueOf(margin));
+
+            for (int i = 0; i < filteredData.size(); i++) {
+
+                MainRecord record = filteredData.get(i);
+
+                // ---------- PARAGRAPH ----------
+                XWPFParagraph paragraph =
+                        document.createParagraph();
+
+                paragraph.setAlignment(
+                        ParagraphAlignment.CENTER
+                );
+
+                XWPFRun run = paragraph.createRun();
+
+                // ---------- QR ----------
+                byte[] qrBytes =
+                        QRCodeGenerator.generateQRCodeBytes(
+                                "https://t.me/testNewRSbot?start="
+                                        + record.getQrCode()
+                        );
+
+                run.addPicture(
+                        new ByteArrayInputStream(qrBytes),
+                        Document.PICTURE_TYPE_PNG,
+                        "qr.png",
+                        Units.toEMU(65),
+                        Units.toEMU(65)
+                );
+                if (i < filteredData.size() - 1) {
+                    run.addBreak(BreakType.PAGE);
+                }
+            }
+
+            // ---------- SAVE ----------
+            DateTimeFormatter formatter =
+                    DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+            String fileName =
+                    "QR_Этикетки_"
+                            + LocalDate.now().format(formatter)
+                            + ".docx";
+
+            FileChooser fileChooser = new FileChooser();
+
+            fileChooser.setTitle("Сохранить QR-этикетки");
+
+            fileChooser.setInitialFileName(fileName);
+
+            fileChooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter(
+                            "Word Document",
+                            "*.docx"
+                    )
+            );
+
+            File file =
+                    fileChooser.showSaveDialog(parentStage);
+
+            if (file != null) {
+
+                try (FileOutputStream out =
+                             new FileOutputStream(file)) {
+
+                    document.write(out);
+
+                    showInformationAlert(
+                            parentStage,
+                            "Успешно",
+                            "QR-этикетки сформированы"
+                    );
+                }
+            }
+
+            document.close();
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            showErrorAlert(
+                    parentStage,
+                    "Ошибка",
+                    "Не удалось сформировать QR-этикетки"
+            );
         }
     }
 }

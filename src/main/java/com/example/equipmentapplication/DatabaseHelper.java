@@ -44,7 +44,8 @@ public class DatabaseHelper {
                 "    equipment.status, \n" +
                 "    SeniorDepartment.fio,\n" +
                 "    equipment.id, \n" +
-                "    equipment.equipmenttype_id \n" +
+                "    equipment.equipmenttype_id, \n" +
+                "    equipment.qr_code \n" +
                 "FROM \n" +
                 "    Office\n" +
                 "INNER JOIN \n" +
@@ -66,7 +67,8 @@ public class DatabaseHelper {
                         resultSet.getString("sn_number"),
                         resultSet.getString("note"),
                         resultSet.getString("status"),
-                        resultSet.getString("fio")
+                        resultSet.getString("fio"),
+                        resultSet.getString("qr_code")
                 );
                 record.setEquipmentId(resultSet.getInt("id")); // Устанавливаем ID принтера
                 record.setEquipmentTypeId(resultSet.getInt("equipmenttype_id"));
@@ -77,6 +79,7 @@ public class DatabaseHelper {
         }
         return records;
     }
+
     public static List<MainRecord> getAllViewByType(int equipmentTypeId) {
         ObservableList<MainRecord> records = FXCollections.observableArrayList();
         String sql =
@@ -91,7 +94,8 @@ public class DatabaseHelper {
                         "  equipment.status, " +
                         "  SeniorDepartment.fio, " +
                         "  equipment.id, " +
-                        "  equipment.equipmenttype_id " +
+                        "  equipment.equipmenttype_id, " +
+                        "  equipment.qr_code " +
                         "FROM Office " +
                         "INNER JOIN Department ON Office.Department_id = Department.id " +
                         "INNER JOIN equipment  ON Office.id = equipment.Office_id " +
@@ -111,7 +115,8 @@ public class DatabaseHelper {
                             rs.getString("sn_number"),
                             rs.getString("note"),
                             rs.getString("status"),
-                            rs.getString("fio")
+                            rs.getString("fio"),
+                            rs.getString("qr_code")
                     );
                     r.setEquipmentId(rs.getInt("id")); // лучше переименовать в setEquipmentId
                     r.setEquipmentTypeId(rs.getInt("equipmentType_id"));
@@ -122,5 +127,135 @@ public class DatabaseHelper {
             e.printStackTrace();
         }
         return records;
+    }
+    public static MainRecord getViewByQr(String qr) {
+
+        String sql =
+                "SELECT " +
+                        "  Office.name_office, " +
+                        "  Office.number_office, " +
+                        "  Department.department_name, " +
+                        "  equipment.name, " +
+                        "  equipment.model, " +
+                        "  equipment.sn_number, " +
+                        "  equipment.note, " +
+                        "  equipment.status, " +
+                        "  SeniorDepartment.fio, " +
+                        "  equipment.id, " +
+                        "  equipment.equipmenttype_id, " +
+                        "  equipment.qr_code " +
+                        "FROM Office " +
+                        "INNER JOIN Department ON Office.Department_id = Department.id " +
+                        "INNER JOIN equipment ON Office.id = equipment.Office_id " +
+                        "INNER JOIN SeniorDepartment ON Department.id = SeniorDepartment.Department_id " +
+                        "WHERE equipment.qr_code = ?";
+
+        try (PreparedStatement st = getConnection().prepareStatement(sql)) {
+
+            st.setString(1, qr);
+
+            try (ResultSet rs = st.executeQuery()) {
+
+                if (rs.next()) {
+
+                    MainRecord r = new MainRecord(
+                            rs.getString("name_office"),
+                            rs.getString("number_office"),
+                            rs.getString("department_name"),
+                            rs.getString("name"),
+                            rs.getString("model"),
+                            rs.getString("sn_number"),
+                            rs.getString("note"),
+                            rs.getString("status"),
+                            rs.getString("fio"),
+                            rs.getString("qr_code")
+                    );
+
+                    r.setEquipmentId(rs.getInt("id"));
+                    r.setEquipmentTypeId(rs.getInt("equipmenttype_id"));
+
+                    return r;
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+    public static Integer getEquipmentIdByQr(String qr) {
+
+        String sql = "SELECT id FROM equipment WHERE qr_code = ?";
+
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+
+            ps.setString(1, qr);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt("id");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+    public static MainRecord getViewBySn(String sn) {
+        String sql = """
+        SELECT
+            Office.name_office,
+            Office.number_office,
+            Department.department_name,
+            equipment.name,
+            equipment.model,
+            equipment.sn_number,
+            equipment.note,
+            equipment.status,
+            SeniorDepartment.fio,
+            equipment.id,
+            equipment.equipmenttype_id,
+            equipment.qr_code
+        FROM Office
+        INNER JOIN Department ON Office.Department_id = Department.id
+        INNER JOIN equipment ON Office.id = equipment.Office_id
+        INNER JOIN SeniorDepartment ON Department.id = SeniorDepartment.Department_id
+        WHERE equipment.sn_number = ?
+    """;
+
+        try (Connection conn = getConnection();
+             PreparedStatement st = conn.prepareStatement(sql)) {
+
+            st.setString(1, sn);
+
+            ResultSet rs = st.executeQuery();
+
+            if (rs.next()) {
+                MainRecord r = new MainRecord(
+                        rs.getString("name_office"),
+                        rs.getString("number_office"),
+                        rs.getString("department_name"),
+                        rs.getString("name"),
+                        rs.getString("model"),
+                        rs.getString("sn_number"),
+                        rs.getString("note"),
+                        rs.getString("status"),
+                        rs.getString("fio"),
+                        rs.getString("qr_code")
+                );
+
+                r.setEquipmentId(rs.getInt("id"));
+                r.setEquipmentTypeId(rs.getInt("equipmenttype_id"));
+                return r;
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 }

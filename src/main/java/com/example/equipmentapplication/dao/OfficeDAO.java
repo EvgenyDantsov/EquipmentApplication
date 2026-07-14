@@ -103,4 +103,26 @@ public class OfficeDAO {
         }
         return officeNumber;
     }
+    public static Integer getOfficeIdByNumber(String officeNumber) {
+
+        String sql =
+                "SELECT id FROM office WHERE number_office = ?";
+
+        try (Connection connection = DatabaseHelper.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, officeNumber);
+
+            ResultSet resultSet = statement.executeQuery();
+
+            if (resultSet.next()) {
+                return resultSet.getInt("id");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
 }

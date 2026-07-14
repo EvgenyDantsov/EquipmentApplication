@@ -1,5 +1,6 @@
 package com.example.equipmentapplication;
 
+import com.example.equipmentapplication.telegramBot.BotStarter;
 import com.example.equipmentapplication.window.*;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -54,47 +55,57 @@ public class HelloApplication extends Application {
     }
 
     private void openMainWindow(Stage primaryStage) {
-	LoadingWindow loadingWindow = new LoadingWindow();
-    	loadingWindow.show();
+        LoadingWindow loadingWindow = new LoadingWindow();
+        loadingWindow.show();
         // Создаем новое окно
         Stage mainStage = new Stage();
-     new Thread(() -> {
-        try {
-            // Обновляем сообщение
-            Platform.runLater(() -> loadingWindow.updateMessage("Подключение к базе данных..."));
-            
-            // Инициализация базы данных
-            DatabaseHelper.getConnection();
-            
-            // Обновляем сообщение
-            Platform.runLater(() -> loadingWindow.updateMessage("Загрузка данных..."));
-            
-            // Создаем и инициализируем главное окно
-            MainWindow mainWindow = new MainWindow();
-            
-            // В UI-потоке запускаем главное окно
-            Platform.runLater(() -> {
-                mainWindow.start(mainStage, primaryStage);
-                loadingWindow.close();
-                mainStage.show();
-            });
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-            Platform.runLater(() -> {
-                loadingWindow.close();
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Ошибка");
-                alert.setHeaderText("Не удалось загрузить данные");
-                alert.setContentText(e.getMessage());
-                alert.showAndWait();
-            });
-        }
-    }).start();
-}
+        Thread thread = new Thread(() -> {
+            try {
+                // Обновляем сообщение
+                Platform.runLater(() -> loadingWindow.updateMessage("Подключение к базе данных..."));
+
+                // Инициализация базы данных
+                DatabaseHelper.getConnection();
+                // Обновляем сообщение
+                Platform.runLater(() -> loadingWindow.updateMessage("Запуск Telegram-бота..."));
+
+                // 👉 ЗАПУСК БОТА
+                BotStarter.start();
+                // Обновляем сообщение
+                Platform.runLater(() -> loadingWindow.updateMessage("Загрузка данных..."));
+
+                // Создаем и инициализируем главное окно
+                MainWindow mainWindow = new MainWindow();
+
+                // В UI-потоке запускаем главное окно
+                Platform.runLater(() -> {
+                    mainWindow.start(mainStage, primaryStage);
+                    loadingWindow.close();
+                    mainStage.show();
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                Platform.runLater(() -> {
+                    loadingWindow.close();
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Ошибка");
+                    alert.setHeaderText("Не удалось загрузить данные");
+                    alert.setContentText(e.getMessage());
+                    alert.showAndWait();
+                });
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
+    }
 
     @Override
     public void stop() {
+        System.out.println("Application closing...");
+        BotStarter.stop();
         DatabaseHelper.disconnect();
+        Platform.exit();
+        System.exit(0);
     }
 }

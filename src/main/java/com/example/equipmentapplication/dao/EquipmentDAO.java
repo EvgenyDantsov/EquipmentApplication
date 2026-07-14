@@ -3,6 +3,7 @@ package com.example.equipmentapplication.dao;
 import com.example.equipmentapplication.DatabaseHelper;
 import com.example.equipmentapplication.dto.Equipment;
 import com.example.equipmentapplication.dto.SeniorDepartment;
+import com.example.equipmentapplication.util.QRCodeGenerator;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
@@ -27,6 +28,7 @@ public class EquipmentDAO {
         }
         return equipmentList;
     }
+
     public static List<Equipment> getByModel(String model) {
 
         List<Equipment> equipments = new ArrayList<>();
@@ -50,6 +52,7 @@ public class EquipmentDAO {
 
         return equipments;
     }
+
     // Загружает оборудование по конкретному типу
     public static ObservableList<Equipment> getEquipmentByType(int equipmentTypeId) {
         ObservableList<Equipment> equipmentList = FXCollections.observableArrayList();
@@ -79,7 +82,8 @@ public class EquipmentDAO {
         int officeId = rs.getInt("Office_id");
         String status = rs.getString("status");
         int equipmentTypeId = rs.getInt("equipmentType_id");
-        return new Equipment(id, name, model, snNumber, note, status, officeId, equipmentTypeId);
+        String qrCode = rs.getString("qr_code");
+        return new Equipment(id, name, model, snNumber, note, status, officeId, equipmentTypeId, qrCode);
     }
 
     public static Equipment getEquipmentById(int id) {
@@ -115,6 +119,17 @@ public class EquipmentDAO {
                 ResultSet generatedKeys = statement.getGeneratedKeys();
                 if (generatedKeys.next()) {
                     int equipmentId = generatedKeys.getInt(1);
+                    String qrCode = String.format("EQ-%06d", equipmentId);
+                    String updateQrSql =
+                            "UPDATE equipment SET qr_code = ? WHERE id = ?";
+
+                    PreparedStatement qrStatement =
+                            connection.prepareStatement(updateQrSql);
+
+                    qrStatement.setString(1, qrCode);
+                    qrStatement.setInt(2, equipmentId);
+
+                    qrStatement.executeUpdate();
                     int responsibleId = getResponsibleIdByOfficeId(officeId);
                     // Создаём запись в истории
                     EquipmentHistoryDAO.addHistory(connection, equipmentId, officeId, responsibleId, status, "Добавление", "-");
@@ -130,7 +145,7 @@ public class EquipmentDAO {
 
     public static boolean updateEquipment(int id, String name, String model, String snNumber, String note, String status, int officeId, int equipmentTypeId) {
         Equipment oldEq = getEquipmentById(id);
-        Equipment newEq = new Equipment(id, name, model, snNumber, note, status, officeId, equipmentTypeId);
+        Equipment newEq = new Equipment(id, name, model, snNumber, note, status, officeId, equipmentTypeId, oldEq.getQrCode());
         try (Connection connection = DatabaseHelper.getConnection()) {
             String sql = "UPDATE equipment SET name = ?, model = ?, sn_number = ?, note = ?, status = ?, Office_id = ?, equipmenttype_id = ? WHERE id = ?";
             PreparedStatement statement = connection.prepareStatement(sql);
@@ -148,7 +163,7 @@ public class EquipmentDAO {
                 int responsibleId = getResponsibleIdByOfficeId(officeId);
                 String details = buildDetails(oldEq, newEq);
                 // ------------------ Логируем изменения ------------------
-                EquipmentHistoryDAO.addHistory(connection,id, officeId, responsibleId, status, "Обновление", details);
+                EquipmentHistoryDAO.addHistory(connection, id, officeId, responsibleId, status, "Обновление", details);
                 return true;
             }
             return false;
@@ -206,7 +221,8 @@ public class EquipmentDAO {
                 note,
                 newStatus,
                 newOfficeId,
-                oldEq.getEquipmentTypeId()
+                oldEq.getEquipmentTypeId(),
+                oldEq.getQrCode()
         );
         try (Connection conn = DatabaseHelper.getConnection()) {
             String sql = "UPDATE equipment SET Office_id = ?, note = ?, status = ? WHERE id = ?";
@@ -225,6 +241,106 @@ public class EquipmentDAO {
                 return true;
             }
             return false;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    public static Equipment getEquipmentByQr(String qr) {
+
+        String sql = """
+        SELECT *
+        FROM equipment
+        WHERE qr_code = ?
+    """;
+
+        try (Connection conn = DatabaseHelper.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, qr);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+
+                return new Equipment(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("model"),
+                        rs.getString("sn_number"),
+                        rs.getString("note"),
+                        rs.getString("status"),
+                        rs.getInt("Office_id"),
+                        rs.getInt("equipmenttype_id"),
+                        rs.getString("qr_code")
+                );
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+    public static boolean moveEquipmentByQr(String qr, int newOfficeId, String note, String newStatus) {
+
+        // 1. Получаем старое оборудование
+        Equipment oldEq = getEquipmentByQr(qr);
+        if (oldEq == null) return false;
+        // ================= KEEP ОБРАБОТКА =================
+        if ("KEEP".equals(newStatus)) {
+            newStatus = oldEq.getStatus(); // 🔥 ВАЖНО: берём старый статус
+        }
+
+        Equipment newEq = new Equipment(
+                oldEq.getId(),
+                oldEq.getName(),
+                oldEq.getModel(),
+                oldEq.getSnNumber(),
+                note,
+                newStatus,
+                newOfficeId,
+                oldEq.getEquipmentTypeId(),
+                oldEq.getQrCode()
+        );
+
+        try (Connection conn = DatabaseHelper.getConnection()) {
+
+            String sql = """
+            UPDATE equipment
+            SET Office_id = ?, note = ?, status = ?
+            WHERE qr_code = ?
+        """;
+
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, newOfficeId);
+            ps.setString(2, note);
+            ps.setString(3, newStatus);
+            ps.setString(4, qr);
+
+            int affectedRows = ps.executeUpdate();
+
+            int responsibleId = getResponsibleIdByOfficeId(newOfficeId);
+
+            if (affectedRows > 0) {
+
+                String details = buildDetails(oldEq, newEq);
+
+                EquipmentHistoryDAO.addHistory(
+                        conn,
+                        oldEq.getId(),
+                        newOfficeId,
+                        responsibleId,
+                        newStatus,
+                        "Перемещение",
+                        details
+                );
+
+                return true;
+            }
+
+            return false;
+
         } catch (SQLException e) {
             e.printStackTrace();
             return false;

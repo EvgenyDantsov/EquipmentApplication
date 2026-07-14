@@ -5,18 +5,27 @@ import com.example.equipmentapplication.dao.*;
 import com.example.equipmentapplication.dto.EquipmentType;
 import com.example.equipmentapplication.dto.Office;
 import com.example.equipmentapplication.dto.Equipment;
+import com.example.equipmentapplication.util.QRCodeGenerator;
+import com.example.equipmentapplication.util.QRCodeViewer;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.HPos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.Image;
 
+import java.awt.*;
 import java.util.Collections;
 
 import static com.example.equipmentapplication.FieldValidator.*;
@@ -80,7 +89,13 @@ public class EquipmentWindow {
         statusColumn.setCellFactory(createStatusTableCellFactory());
         TableColumn<Equipment, Integer> equipmentTypeColumn = new TableColumn<>("Тип оборудования"); // NEW
         equipmentTypeColumn.setCellValueFactory(new PropertyValueFactory<>("equipmentTypeId")); // NEW
-        Collections.addAll(table.getColumns(), idColumn, nameColumn, modelColumn, snColumn, noteColumn, statusColumn, officeIdColumn, equipmentTypeColumn);
+        TableColumn<Equipment, String> qrColumn =
+                new TableColumn<>("QR Code");
+
+        qrColumn.setCellValueFactory(
+                new PropertyValueFactory<>("qrCode")
+        );
+        Collections.addAll(table.getColumns(), idColumn, nameColumn, modelColumn, snColumn, noteColumn, statusColumn, officeIdColumn, equipmentTypeColumn, qrColumn);
         loadEquipment();
         // Поля для ввода данных
         nameComboBox = new ComboBox<>();
@@ -201,6 +216,8 @@ public class EquipmentWindow {
         updateButton.setOnAction(e -> updateEquipment());
         Button deleteButton = new Button("Удалить");
         deleteButton.setOnAction(e -> deleteEquipment());
+        Button showQrButton = new Button("Показать QR");
+        showQrButton.setOnAction(e -> showQrCode());
         Button backButton = new Button("Назад");
         backButton.setOnAction(e -> equipmentStage.close());
         Button sensorsButton = new Button("Датчики");
@@ -219,7 +236,7 @@ public class EquipmentWindow {
         } else {
             sensorsButton.setVisible(false); // для других типов кнопка скрыта
         }
-        HBox buttonsBox = new HBox(10, addButton, updateButton, deleteButton, backButton, clearFilterButton);
+        HBox buttonsBox = new HBox(10, addButton, updateButton, deleteButton, showQrButton, backButton, clearFilterButton);
         if (sensorsButton.isVisible()) {
             buttonsBox.getChildren().add(sensorsButton);
         }
@@ -239,7 +256,7 @@ public class EquipmentWindow {
         GridPane.setHalignment(clearFilterButton, HPos.LEFT); // Выравнивание по левому краю
 
         VBox layout = new VBox(10, table, inputForm, buttonsBox);
-        Scene scene = new Scene(layout, 900, 550);
+        Scene scene = new Scene(layout, 980, 550);
         equipmentStage.setScene(scene);
         scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
         // Позиционирование окна по центру относительно родительского окна
@@ -460,5 +477,11 @@ public class EquipmentWindow {
             case "Списан" -> "written_off";
             default -> "active";
         };
+    }
+
+    private void showQrCode() {
+        Equipment selected = table.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+        QRCodeViewer.show(selected.getQrCode());
     }
 }

@@ -1,4 +1,4 @@
-# 🧰 EquipmentApplication
+# 🧰 EquipmentApplication(update file in future)
 
 ### 🧾 Project Description
 **EquipmentApplication** is a desktop JavaFX program for managing equipment in an organization.  

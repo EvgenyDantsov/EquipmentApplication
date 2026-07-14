@@ -31,12 +31,10 @@ public class SeniorDepartmentWindow {
     private static final String ERROR_TITLE = "Ошибка";
     private static final String FILL_REQUIRED_FIELDS = "Заполните все обязательные поля.";
     private static final String SELECT_FIO = "Выберите ФИО для изменения.";
-    private static final String FIO_UNIQUE = "ФИО должен быть уникальным";
     private static final String ADD_SENIOR_DEPARTMENT = "Не удалось добавить старшую отделения";
     private static final String UPDATE_SENIOR_DEPARTMENT = "Не удалось обновить старшую отделения.";
     private static final String SELECT_DEPARTMENT_NAME = "Выберите название отделения.";
     private static final String SELECT_FIO_TO_DELETE = "Выберите ФИО для удаления.";
-    public static final int NO_EXCLUDE = -1;
 
     public void start(Stage seniorDepartmentStage, Stage parentStage) {
         this.seniorDepartmentStage = seniorDepartmentStage;
@@ -146,10 +144,10 @@ public class SeniorDepartmentWindow {
         }
         SeniorDepartmentFormData seniorDepartmentFormData = getSeniorDepartmentFormData();
         // Проверка уникальности fio
-        if (SeniorDepartmentDAO.fioExists(seniorDepartmentFormData.fio, NO_EXCLUDE)) {
-            showErrorAlert(seniorDepartmentStage, ERROR_TITLE, FIO_UNIQUE);
-            return;
-        }
+//        if (SeniorDepartmentDAO.fioExists(seniorDepartmentFormData.fio, NO_EXCLUDE)) {
+//            showErrorAlert(seniorDepartmentStage, ERROR_TITLE, FIO_UNIQUE);
+//            return;
+//        }
         if (SeniorDepartmentDAO.addSeniorDepartment(seniorDepartmentFormData.fio, seniorDepartmentFormData.department.getId())) {
             loadSeniorDepartment();
             clearFields();
@@ -169,10 +167,10 @@ public class SeniorDepartmentWindow {
         }
         SeniorDepartmentFormData seniorDepartmentFormData = getSeniorDepartmentFormData();
         // Проверка уникальности fio (исключая текущую запись)
-        if (SeniorDepartmentDAO.fioExists(seniorDepartmentFormData.fio, selectedSeniorDepartment.getId())) {
-            showErrorAlert(seniorDepartmentStage, ERROR_TITLE, FIO_UNIQUE);
-            return;
-        }
+//        if (SeniorDepartmentDAO.fioExists(seniorDepartmentFormData.fio, selectedSeniorDepartment.getId())) {
+//            showErrorAlert(seniorDepartmentStage, ERROR_TITLE, FIO_UNIQUE);
+//            return;
+//        }
         if (SeniorDepartmentDAO.updateSeniorDepartment(selectedSeniorDepartment.getId(), seniorDepartmentFormData.fio, seniorDepartmentFormData.department.getId())) {
             loadSeniorDepartment();
             clearFields();

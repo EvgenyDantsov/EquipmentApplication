@@ -10,12 +10,17 @@ public class MainRecord {
     private String note;
     private String status;
     private String fio;
+    private String qrCode;
     private int equipmentTypeId;
     private int equipmentId;
 
+    public String getQrCode() {
+        return qrCode;
+    }
+
     public MainRecord(String nameOffice, String numberOffice, String nameDepartment,
                       String nameEquipment, String model, String snNumber,
-                      String note, String status, String fio) {
+                      String note, String status, String fio, String qrCode) {
         this.nameOffice = nameOffice;
         this.numberOffice = numberOffice;
         this.nameDepartment = nameDepartment;
@@ -25,6 +30,7 @@ public class MainRecord {
         this.note = note;
         this.status = status;
         this.fio = fio;
+        this.qrCode=qrCode;
     }
 
     // Геттеры

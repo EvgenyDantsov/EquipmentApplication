@@ -1,29 +1,47 @@
 # 🧰 EquipmentApplication
 
 ### 🧾 Project Description
-**EquipmentApplication** is a desktop JavaFX program for managing equipment in an organization.  
-It helps record where each item is installed, who is responsible for it, and its current status (installed, stored, or disposed).
+**EquipmentApplication** is a desktop JavaFX application for managing equipment within an organization.
+The application allows users to track equipment locations, responsible persons, current status, repair history, and generate QR codes for quick identification. It also integrates with a Telegram bot, allowing equipment information to be accessed directly from a mobile device.
+
 
 ---
 
 ### 🎯 Project Goal
-The main goal is to make equipment registration and tracking easier.
+TThe main goal is to simplify equipment registration, inventory management, and maintenance tracking.
 
 You can:
-- 📍 View all equipment and its location  
-- 👤 Assign responsible persons  
-- 🔄 Change statuses  
-- 🧾 Add, edit, or delete records  
-- 🔍 Search through the list
+
+- 📍 View all equipment and its current location
+- 👤 Assign responsible persons
+- 🔄 Change equipment status (installed, stored, written off)
+- 🧾 Add, edit, and delete equipment
+- 🔍 Search equipment by different parameters
+- 🏷️ Generate unique QR codes for every equipment item
+- 🖨️ Print QR labels for equipment
+- 👁️ View QR codes directly inside the application
+- 🛠️ Maintain complete repair history
+- 📅 Record repair dates, malfunctions, performed work, and repair costs
+- 📱 Scan QR codes using a Telegram bot
+- 🚚 Move equipment between offices directly from Telegram
+- 📖 View repair history through Telegram
+- 📊 Generate Excel reports
 
 ---
 
 ### ⚙️ Technologies Used
-- ☕ **Java 17+**
-- 🎨 **JavaFX** — user interface
-- 🗄️ **MySQL** — database
-- 🧩 **DAO / DTO pattern**
-- ⚙️ **Maven / Build Artifacts**
+
+- ☕ **Java 17**
+- 🎨 **JavaFX**
+- 🗄️ **MySQL**
+- 📦 **Maven**
+- 🧩 **DAO / DTO architecture**
+- 📄 **Apache POI** — Excel report generation
+- 🏷️ **ZXing** — QR code generation
+- 🤖 **Telegram Bots API** — mobile interaction with the system
+- 📡 **Jackson Databind** — JSON processing
+- 📑 **JUnit 5** — testing
+- 📝 **Log4j 2** — logging
 
 ---
 
@@ -36,8 +54,9 @@ src/java/com/example/equipmentapplication/
 ├── dao/
 │ ├── DepartmentDAO.java
 │ ├── EquipmentDAO.java
-│ ├── EquipmentHistoryDAO.java
 │ ├── EquipmentDictionaryDAO.java
+│ ├── EquipmentHistoryDAO.java
+│ ├── EquipmentRepairDAO.java
 │ ├── EquipmentTypeDAO.java
 │ ├── OfficeDAO.java
 │ ├── SeniorDepartmentDAO.java
@@ -49,6 +68,7 @@ src/java/com/example/equipmentapplication/
 │ ├── Equipment.java
 │ ├── EquipmentDictionary.java
 │ ├── EquipmentHistory.java
+│ ├── EquipmentRepair.java
 │ ├── EquipmentType.java
 │ ├── MainRecord.java
 │ ├── Office.java
@@ -56,14 +76,21 @@ src/java/com/example/equipmentapplication/
 │ ├── UltrasoundSensor.java
 │ └── UltrasoundSensorDictionary.java
 │
+├── telegramBot/
+│ ├── BotStarter.java
+│ └── EquipmentBot.java
+│
 ├── util/
 │ ├── AlertUtils.java
+│ ├── QRCodeGenerator.java
+│ ├── QRCodeViewer.java
 │ └── WindowUtils.java
 │
 ├── window/
 │ ├── DepartmentWindow.java
 │ ├── EquipmentDictionaryWindow.java
 │ ├── EquipmentHistoryWindow.java
+│ ├── EquipmentRepairWindow.java
 │ ├── EquipmentTypeWindow.java
 │ ├── EquipmentWindow.java
 │ ├── LoadingWindow.java
@@ -113,6 +140,13 @@ erDiagram
         datetime change_date
         text details
     }
+    EQUIPMENT_REPAIR {
+        int id
+        date repair_date
+        string malfunction
+        string work_done
+        decimal cost
+    }
     EQUIPMENT {
         int id
         string name
@@ -120,6 +154,7 @@ erDiagram
         string sn_number
         string note
         enum status
+        string qr_code
     }
     ULTRASOUNDSENSORS {
         int id
@@ -141,9 +176,10 @@ erDiagram
     OFFICE ||--o{ EQUIPMENT : ""
     EQUIPMENTTYPE ||--o{ EQUIPMENT : ""
     EQUIPMENTTYPE ||--o{ EQUIPMENTDICTIONARY : ""
+    EQUIPMENT ||--o{ EQUIPMENT_HISTORY : ""
+    EQUIPMENT ||--o{ EQUIPMENT_REPAIR : ""
     EQUIPMENT ||--o{ ULTRASOUNDSENSORS : ""
     ULTRASOUNDSENSOR_DICTIONARY ||--o{ ULTRASOUNDSENSORS : ""
-    EQUIPMENT ||--o{ EQUIPMENT_HISTORY : ""
 ```
 ---
 🖼️ Interface Example
